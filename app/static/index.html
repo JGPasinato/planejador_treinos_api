@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planejador de treinos ao ar livre</title>
+  <style>
+    :root {
+      --azul: #1d4ed8;
+      --azul-escuro: #1e3a8a;
+      --azul-claro: #eff6ff;
+      --borda: #dbe3ef;
+      --texto: #1f2937;
+      --texto-suave: #6b7280;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: var(--texto); background: #f3f6fb; }
+    a { color: var(--azul); }
+
+    /* Menu */
+    .menu { position: sticky; top: 0; z-index: 10; background: var(--azul-escuro); box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+    .menu-conteudo { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .marca { color: #fff; font-weight: 700; font-size: 18px; text-decoration: none; }
+    .menu nav { display: flex; gap: 4px; }
+    .menu nav a { color: #dbeafe; text-decoration: none; padding: 8px 14px; border-radius: 6px; font-size: 14px; }
+    .menu nav a:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+    /* Cabeçalho */
+    .cabecalho { background: linear-gradient(135deg, var(--azul) 0%, var(--azul-escuro) 100%); color: #fff; padding: 36px 24px 80px; }
+    .cabecalho div { max-width: 1100px; margin: 0 auto; }
+    .cabecalho h1 { margin: 0 0 8px; font-size: 28px; }
+    .cabecalho p { margin: 0; color: #dbeafe; font-size: 15px; }
+
+    main { max-width: 1100px; margin: -56px auto 0; padding: 0 24px; }
+
+    /* Cartões de resumo */
+    .resumo { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+    .cartao-resumo { background: #fff; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-top: 4px solid var(--azul); }
+    .cartao-resumo span { display: block; font-size: 13px; color: var(--texto-suave); }
+    .cartao-resumo strong { font-size: 26px; }
+    .cartao-resumo.planejado { border-top-color: #94a3b8; }
+    .cartao-resumo.apto { border-top-color: #16a34a; }
+    .cartao-resumo.atencao { border-top-color: #d97706; }
+    .cartao-resumo.cancelado { border-top-color: #dc2626; }
+    .cartao-resumo.realizado { border-top-color: #0891b2; }
+
+    /* Caixas */
+    .caixa { background: #fff; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .caixa h2 { margin: 0 0 4px; font-size: 20px; color: var(--azul-escuro); }
+    .caixa .descricao { margin: 0 0 20px; color: var(--texto-suave); font-size: 14px; }
+
+    /* Formulário */
+    form { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+    .campo { display: flex; flex-direction: column; gap: 6px; }
+    .campo label { font-size: 13px; font-weight: 600; color: #374151; }
+    .col-1 { grid-column: span 1; }
+    .col-2 { grid-column: span 2; }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    input, select { width: 100%; padding: 10px 12px; font-size: 14px; font-family: inherit; border: 1px solid var(--borda); border-radius: 8px; background: #fff; color: var(--texto); }
+    input:focus, select:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(29,78,216,.15); }
+    .acoes-form { grid-column: span 6; display: flex; justify-content: flex-end; }
+
+    /* Botões */
+    button { font-family: inherit; font-size: 14px; padding: 10px 18px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; background: var(--azul); color: #fff; font-weight: 600; }
+    button:hover { background: var(--azul-escuro); }
+    button.pequeno { padding: 6px 10px; font-size: 13px; font-weight: 500; }
+    button.contorno { background: #fff; color: var(--azul); border-color: var(--azul); }
+    button.contorno:hover { background: var(--azul-claro); }
+    button.perigo { background: #fff; color: #dc2626; border-color: #fca5a5; }
+    button.perigo:hover { background: #fef2f2; }
+
+    /* Lista */
+    .topo-lista { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    .topo-lista .descricao { margin: 0; }
+    .filtros { display: flex; gap: 12px; }
+    .filtros .campo { width: 160px; }
+    .tabela { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 12px; background: var(--azul-claro); color: var(--azul-escuro); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+    th:first-child { border-radius: 8px 0 0 8px; }
+    th:last-child { border-radius: 0 8px 8px 0; }
+    td { padding: 12px; border-bottom: 1px solid #eef2f7; vertical-align: top; }
+    tbody tr:hover { background: #f8fafc; }
+    td .detalhe { color: var(--texto-suave); font-size: 13px; }
+    td.acoes { white-space: nowrap; text-align: right; }
+    td.acoes button { margin-left: 4px; }
+    .vazio { text-align: center; color: var(--texto-suave); padding: 32px; }
+
+    .status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #f1f5f9; color: #475569; }
+    .status.apto { background: #dcfce7; color: #166534; }
+    .status.atencao { background: #fef3c7; color: #92400e; }
+    .status.cancelado { background: #fee2e2; color: #991b1b; }
+    .status.realizado { background: #cffafe; color: #155e75; }
+
+    /* Aviso */
+    #mensagem { position: fixed; top: 76px; right: 24px; max-width: 380px; padding: 14px 18px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,.15); display: none; z-index: 20; }
+    #mensagem.ok { display: block; background: #fff; border-left: 4px solid #16a34a; }
+    #mensagem.erro { display: block; background: #fff; border-left: 4px solid #dc2626; }
+
+    footer { text-align: center; font-size: 13px; color: var(--texto-suave); padding: 8px 0 32px; }
+
+    @media (max-width: 800px) {
+      .menu nav a { padding: 8px; font-size: 13px; }
+      .resumo { grid-template-columns: repeat(3, 1fr); }
+      form { grid-template-columns: 1fr 1fr; }
+      .col-1, .col-2 { grid-column: span 1; }
+      .col-4, .col-6, .acoes-form { grid-column: span 2; }
+      .filtros { width: 100%; }
+      .filtros .campo { flex: 1; width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="menu">
+    <div class="menu-conteudo">
+      <a class="marca" href="#inicio">Treino ao Ar Livre</a>
+      <nav>
+        <a href="#inicio">Início</a>
+        <a href="#novo">Novo treino</a>
+        <a href="#treinos">Meus treinos</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="cabecalho" id="inicio">
+    <div>
+      <h1>Planejador de treinos ao ar livre</h1>
+      <p>Cadastre seus treinos e veja se o clima no horário do treino está bom, pede atenção ou é melhor cancelar.</p>
+    </div>
+  </section>
+
+  <div id="mensagem"></div>
+
+  <main>
+    <section class="resumo">
+      <div class="cartao-resumo"><span>Total</span><strong id="total-geral">0</strong></div>
+      <div class="cartao-resumo planejado"><span>Planejados</span><strong data-status="planejado">0</strong></div>
+      <div class="cartao-resumo apto"><span>Aptos</span><strong data-status="apto">0</strong></div>
+      <div class="cartao-resumo atencao"><span>Atenção</span><strong data-status="atencao">0</strong></div>
+      <div class="cartao-resumo cancelado"><span>Cancelados</span><strong data-status="cancelado">0</strong></div>
+      <div class="cartao-resumo realizado"><span>Realizados</span><strong data-status="realizado">0</strong></div>
+    </section>
+
+    <section class="caixa" id="novo">
+      <h2>Novo treino</h2>
+      <p class="descricao">Preencha os dados do treino. Depois é só clicar em "Avaliar clima" na lista.</p>
+      <form id="form-treino">
+        <div class="campo col-4">
+          <label for="titulo">Título</label>
+          <input id="titulo" name="titulo" required minlength="3" placeholder="Ex.: Corrida na orla">
+        </div>
+        <div class="campo col-2">
+          <label for="tipo">Tipo</label>
+          <select id="tipo" name="tipo">
+            <option value="corrida">Corrida</option>
+            <option value="caminhada">Caminhada</option>
+            <option value="ciclismo">Ciclismo</option>
+            <option value="funcional">Funcional</option>
+          </select>
+        </div>
+        <div class="campo col-2">
+          <label for="cidade">Cidade</label>
+          <input id="cidade" name="cidade" required placeholder="Ex.: Recife">
+        </div>
+        <div class="campo col-2">
+          <label for="data">Data</label>
+          <input id="data" name="data" required placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+                 pattern="\d{2}/\d{2}/\d{4}" title="Use o formato DD/MM/AAAA">
+        </div>
+        <div class="campo col-1">
+          <label for="hora">Hora</label>
+          <input id="hora" name="hora" required placeholder="HH:MM" maxlength="5" inputmode="numeric"
+                 pattern="([01]\d|2[0-3]):[0-5]\d" title="Use o formato HH:MM (24 horas)">
+        </div>
+        <div class="campo col-1">
+          <label for="duracao_min">Duração (min)</label>
+          <input id="duracao_min" name="duracao_min" type="number" min="10" max="300" value="40" required>
+        </div>
+        <div class="campo col-6">
+          <label for="notas">Notas</label>
+          <input id="notas" name="notas" placeholder="Opcional">
+        </div>
+        <div class="acoes-form">
+          <button type="submit">Cadastrar treino</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="caixa" id="treinos">
+      <div class="topo-lista">
+        <div>
+          <h2>Meus treinos</h2>
+          <p class="descricao">Treinos cadastrados, do mais distante para o mais próximo.</p>
+        </div>
+        <div class="filtros">
+          <div class="campo">
+            <label for="filtro-tipo">Tipo</label>
+            <select id="filtro-tipo">
+              <option value="">Todos</option>
+              <option value="corrida">Corrida</option>
+              <option value="caminhada">Caminhada</option>
+              <option value="ciclismo">Ciclismo</option>
+              <option value="funcional">Funcional</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="filtro-status">Status</label>
+            <select id="filtro-status">
+              <option value="">Todos</option>
+              <option value="planejado">Planejado</option>
+              <option value="apto">Apto</option>
+              <option value="atencao">Atenção</option>
+              <option value="cancelado">Cancelado</option>
+              <option value="realizado">Realizado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="tabela">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Treino</th>
+              <th>Cidade</th>
+              <th>Status</th>
+              <th>Clima</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="lista"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Previsão do tempo: <a href="https://open-meteo.com/">Open-Meteo</a> ·
+      <a href="/docs">Documentação da API</a>
+    </footer>
+  </main>
+
+  <script>
+    const nomesStatus = {
+      planejado: "Planejado",
+      apto: "Apto",
+      atencao: "Atenção",
+      cancelado: "Cancelado",
+      realizado: "Realizado",
+    };
+
+    const nomesTipo = {
+      corrida: "Corrida",
+      caminhada: "Caminhada",
+      ciclismo: "Ciclismo",
+      funcional: "Funcional",
+    };
+
+    let timerMensagem;
+
+    function mostrarMensagem(texto, tipo) {
+      const div = document.getElementById("mensagem");
+      div.textContent = texto;
+      div.className = tipo;
+      clearTimeout(timerMensagem);
+      timerMensagem = setTimeout(() => (div.className = ""), 5000);
+    }
+
+    async function chamarApi(metodo, url, corpo) {
+      const opcoes = { method: metodo, headers: { "Content-Type": "application/json" } };
+      if (corpo) opcoes.body = JSON.stringify(corpo);
+
+      const resp = await fetch(url, opcoes);
+      if (resp.status === 204) return null;
+
+      const dados = await resp.json();
+      if (!resp.ok) {
+        const detalhe = typeof dados.detail === "string" ? dados.detail : JSON.stringify(dados.detail);
+        throw new Error(detalhe);
+      }
+      return dados;
+    }
+
+    function formatarData(iso) {
+      const [data, hora] = iso.split("T");
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano} ${hora.slice(0, 5)}`;
+    }
+
+    function paraIso(data, hora) {
+      const [dia, mes, ano] = data.split("/").map(Number);
+      const teste = new Date(ano, mes - 1, dia);
+      if (teste.getDate() !== dia || teste.getMonth() !== mes - 1) {
+        throw new Error("Data inválida: " + data);
+      }
+      return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}T${hora}:00`;
+    }
+
+    function aplicarMascara(campo, separador, posicoes) {
+      campo.addEventListener("input", () => {
+        const numeros = campo.value.replace(/\D/g, "");
+        let resultado = "";
+        for (let i = 0; i < numeros.length; i++) {
+          if (posicoes.includes(i)) resultado += separador;
+          resultado += numeros[i];
+        }
+        campo.value = resultado;
+      });
+    }
+
+    function escapar(texto) {
+      const div = document.createElement("div");
+      div.textContent = texto ?? "";
+      return div.innerHTML;
+    }
+
+    async function carregarTreinos() {
+      const params = new URLSearchParams({ limit: 100 });
+      const tipo = document.getElementById("filtro-tipo").value;
+      const status = document.getElementById("filtro-status").value;
+      if (tipo) params.append("tipo", tipo);
+      if (status) params.append("status", status);
+
+      const treinos = await chamarApi("GET", "/treinos?" + params);
+      const lista = document.getElementById("lista");
+
+      if (treinos.length === 0) {
+        lista.innerHTML = '<tr><td colspan="6" class="vazio">Nenhum treino encontrado.</td></tr>';
+      } else {
+        lista.innerHTML = treinos.map((t) => `
+          <tr>
+            <td>${formatarData(t.data_hora)}</td>
+            <td><strong>${escapar(t.titulo)}</strong><div class="detalhe">${nomesTipo[t.tipo] || t.tipo} · ${t.duracao_min} min</div></td>
+            <td>${escapar(t.cidade)}</td>
+            <td><span class="status ${t.status}">${nomesStatus[t.status] || t.status}</span></td>
+            <td>
+              ${t.temperatura_c != null ? `<strong>${t.temperatura_c} °C</strong>` : '<span class="detalhe">Não avaliado</span>'}
+              <div class="detalhe">${escapar(t.ultima_avaliacao)}</div>
+            </td>
+            <td class="acoes">
+              <button class="pequeno" onclick="avaliar(${t.id})">Avaliar clima</button>
+              <button class="pequeno contorno" onclick="marcarRealizado(${t.id})">Realizado</button>
+              <button class="pequeno perigo" onclick="excluir(${t.id})">Excluir</button>
+            </td>
+          </tr>
+        `).join("");
+      }
+
+      carregarResumo();
+    }
+
+    async function carregarResumo() {
+      const resumo = await chamarApi("GET", "/resumo");
+      document.getElementById("total-geral").textContent = resumo.total;
+      document.querySelectorAll("[data-status]").forEach((el) => {
+        el.textContent = resumo.por_status[el.dataset.status] || 0;
+      });
+    }
+
+    async function avaliar(id) {
+      try {
+        const treino = await chamarApi("POST", `/treinos/${id}/avaliar`);
+        mostrarMensagem(`${treino.titulo}: ${nomesStatus[treino.status]}. ${treino.ultima_avaliacao}`, "ok");
+      } catch (erro) {
+        mostrarMensagem(erro.message, "erro");
+      }
+      carregarTreinos();
+    }
+
+    async function marcarRealizado(id) {
+      try {
+        await chamarApi("PUT", `/treinos/${id}`, { status: "realizado" });
+      } catch (erro) {
+        mostrarMensagem(erro.message, "erro");
+      }
+      carregarTreinos();
+    }
+
+    async function excluir(id) {
+      if (!confirm("Excluir este treino?")) return;
+      try {
+        await chamarApi("DELETE", `/treinos/${id}`);
+      } catch (erro) {
+        mostrarMensagem(erro.message, "erro");
+      }
+      carregarTreinos();
+    }
+
+    document.getElementById("form-treino").addEventListener("submit", async (evento) => {
+      evento.preventDefault();
+      const form = evento.target;
+      const dados = Object.fromEntries(new FormData(form));
+      dados.duracao_min = Number(dados.duracao_min);
+      if (!dados.notas) delete dados.notas;
+
+      try {
+        dados.data_hora = paraIso(dados.data, dados.hora);
+        delete dados.data;
+        delete dados.hora;
+        await chamarApi("POST", "/treinos", dados);
+        mostrarMensagem("Treino cadastrado! Clique em \"Avaliar clima\" para ver a previsão.", "ok");
+        form.reset();
+        preencherDataPadrao();
+        carregarTreinos();
+      } catch (erro) {
+        mostrarMensagem(erro.message, "erro");
+      }
+    });
+
+    document.getElementById("filtro-tipo").addEventListener("change", carregarTreinos);
+    document.getElementById("filtro-status").addEventListener("change", carregarTreinos);
+
+    function preencherDataPadrao() {
+      const amanha = new Date();
+      amanha.setDate(amanha.getDate() + 1);
+      document.getElementById("data").value = amanha.toLocaleDateString("pt-BR");
+      document.getElementById("hora").value = "06:00";
+    }
+
+    aplicarMascara(document.getElementById("data"), "/", [2, 4]);
+    aplicarMascara(document.getElementById("hora"), ":", [2]);
+    preencherDataPadrao();
+    carregarTreinos();
+  </script>
+</body>
+</html>
